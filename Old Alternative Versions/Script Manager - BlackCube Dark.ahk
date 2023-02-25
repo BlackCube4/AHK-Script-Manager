@@ -10,8 +10,8 @@
 
 DetectHiddenWindows, On
 #SingleInstance Force
-#Include Class_ImageButton.ahk
-#Include UseGDIP.ahk
+#Include Image Buttons/Class_ImageButton.ahk
+#Include Image Buttons/UseGDIP.ahk
 
 Gui, Destroy
 Gui, New , HwndListRunningScripts, List running Scripts
