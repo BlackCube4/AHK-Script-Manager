@@ -4,10 +4,12 @@
 ; http://www.xp-waste.com/post23929.html#p23929
 
 #Include supportScripts\GetClientSize.ahk
+;OnMessage(0x0111, "MsgMonitor")
 
 DetectHiddenWindows, On
 #SingleInstance Force
 Menu, tray, Icon , Script Manager.ico
+CurrentIcon:="normal"
 OnExit, ExitLabel
 
 standardWidth := "435"
@@ -86,8 +88,8 @@ Pause:
 	{
 		startingRow := LV_GetNext(startingRow)
 		LV_GetText(rowPath, startingRow, 2)
-		;PostMessage, 0x111, 65306,,, % rowPath
-		PostMessage, 0x0111, 65403,,, % rowPath
+		PostMessage, 0x111, 65306,,, % rowPath
+		;PostMessage, 0x0111, 65403,,, % rowPath
 	}
 Return
 
@@ -97,8 +99,8 @@ Suspend:
 	{
 		startingRow := LV_GetNext(startingRow)
 		LV_GetText(rowPath, startingRow, 2)
-		;PostMessage, 0x111, 65305,,, % rowPath
-		PostMessage, 0x0111, 65404,,, % rowPath
+		PostMessage, 0x111, 65305,,, % rowPath
+		;PostMessage, 0x0111, 65404,,, % rowPath
 	}
 Return
 
@@ -236,3 +238,42 @@ GetProcessMemoryInfo(pid, info=-1) {
         DllCall("CloseHandle", "UInt", h)
     }
 }
+
+/*
+MsgMonitor(wParam, lParam, msg) {
+	global CurrentIcon
+	
+	if (wParam = 65403 and CurrentIcon = "normal") {
+		Menu, tray, Icon , Script Manager Paused.ico
+		CurrentIcon := "paused"
+	}
+	else if (wParam = 65403 and CurrentIcon = "paused") {
+		Menu, tray, Icon , Script Manager.ico
+		CurrentIcon := "normal"
+	}
+	else if (wParam = 65403 and CurrentIcon = "paused suspended") {
+		Menu, tray, Icon , Script Manager Suspended.ico
+		CurrentIcon := "suspended"
+	}
+	else if (wParam = 65403 and CurrentIcon = "suspended") {
+		Menu, tray, Icon , Script Manager Paused Suspended.ico
+		CurrentIcon := "paused suspended"
+	}
+	else if (wParam = 65404 and CurrentIcon = "normal") {
+		Menu, tray, Icon , Script Manager Suspended.ico
+		CurrentIcon := "suspended"
+	}
+	else if (wParam = 65404 and CurrentIcon = "paused") {
+		Menu, tray, Icon , Script Manager Paused Suspended.ico
+		CurrentIcon := "paused suspended"
+	}
+	else if (wParam = 65404 and CurrentIcon = "paused suspended") {
+		Menu, tray, Icon , Script Manager Paused.ico
+		CurrentIcon := "paused"
+	}
+	else if (wParam = 65404 and CurrentIcon = "suspended") {
+		Menu, tray, Icon , Script Manager.ico
+		CurrentIcon := "normal"
+	}
+}
+*/
