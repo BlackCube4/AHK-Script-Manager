@@ -68,6 +68,7 @@ ListClick:
 	startingRow := LV_GetNext()
 	LV_GetText(rowAhkID, startingRow, 3)
 	Process, Close, %rowAhkID%
+	RefreshList()
 Return
 
 CloseScript:
