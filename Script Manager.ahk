@@ -3,32 +3,59 @@
 ; http://www.autohotkey.com/board/topic/95550-how-to-get-a-list-of-autohotkey-scripts-running/
 ; http://www.xp-waste.com/post23929.html#p23929
 
+#Include supportScripts\GetClientSize.ahk
+
 DetectHiddenWindows, On
 #SingleInstance Force
 Menu, tray, Icon , Script Manager.ico
+OnExit, ExitLabel
+
+standardWidth := "435"
+standardHeight := "202"
+setini:=A_ScriptDir . "\settings.ini"
+IniRead, lastX, settings.ini, guiSettings, lastX, %A_Space%
+IniRead, lastY, settings.ini, guiSettings, lastY, %A_Space%
+IniRead, lastWidth, settings.ini, guiSettings, lastWidth, %standardWidth%
+IniRead, lastHeight, settings.ini, guiSettings, lastHeight, %standardHeight%
+
+listWidth:=lastWidth-20
+listHeight:=lastHeight-55
 
 Gui, Destroy
-Gui, New , , Script Manager
+Gui, New, +HwndguiID, Script Manager
 Gui, Margin, 10, 10
 Gui, +Resize +MinSize435x202
 
-Gui, Add, ListView, x11 w413 vlvwList hwndhlvwList gListClick, Name|Script Path|PID|Working Set|Peak Working Set|Page File|Peak Page File
+Gui, Add, ListView, x11 w%listWidth% h%listHeight% vlvwList hwndhlvwList gListClick, Name|Script Path|PID|Working Set|Peak Working Set|Page File|Peak Page File
 
 Gui, Add, Button, x10 y+5 w90 h30 hwndhRefresh gRefresh, Refresh List
-Gui, Add, Button, yp x+5 w60 hp hwndhEndProc gEndProc, Close
+Gui, Add, Button, yp x+5 w60 hp hwndhEndProc gCloseScript, Close
 Gui, Add, Button, yp x+5 wp hp hwndhEndProc gPause, Pause
 Gui, Add, Button, yp x+5 wp hp hwndhEndProc gSuspend, Suspend
 Gui, Add, Button, yp x+5 wp hp hwndhEndProc gEdit, Edit
 Gui, Add, Button, yp x+5 wp hp hwndhEndProc gReload, Reload
 
-;Gui, Show, w434 h202 Hide
+if (lastX="" or lastY="")
+	Gui, Show, % "w" . lastWidth . " h" . lastHeight
+else
+	Gui, Show, % "x" . lastX . " y" . lastY . " w" . lastWidth . " h" . lastHeight
 
-Gui, Show, ;w434 h202
 RefreshList()
 Return
 
 GuiClose:
-ExitApp
+	WinGetPos, guiX, guiY, , , ahk_id %guiID%
+	GetClientSize(guiID, guiW, guiH)
+	IniWrite, %guiX%, %setini%, guiSettings, lastX
+	IniWrite, %guiY%, %setini%, guiSettings, lastY
+	IniWrite, %guiW%, %setini%, guiSettings, lastWidth
+	IniWrite, %guiH%, %setini%, guiSettings, lastHeight
+	ExitApp
+return
+
+ExitLabel:
+	ExitApp
+return
 
 Refresh:
     RefreshList()
@@ -37,32 +64,76 @@ Return
 ListClick:
     If (A_GuiEvent <> "DoubleClick")
         Return
-EndProc:
-    i := LV_GetNext()
-    WinKill, % "ahk_id " AHKWindows%i%
+	startingRow := LV_GetNext()
+	LV_GetText(rowAhkID, startingRow, 3)
+	Process, Close, %rowAhkID%
+Return
+
+CloseScript:
+    startingRow:=0
+	loop % LV_GetCount("Selected")
+	{
+		startingRow := LV_GetNext(startingRow)
+		LV_GetText(rowAhkID, startingRow, 3)
+		Process, Close, %rowAhkID%
+	}
     RefreshList()
 Return
 
 Pause:
-	i := LV_GetNext()
-	;PostMessage, 0x111, 65306,,, % GetScriptPathFromHwnd(AHKWindows%i%)
-	PostMessage, 0x0111, 65403,,, % GetScriptPathFromHwnd(AHKWindows%i%)
+	startingRow:=0
+	loop % LV_GetCount("Selected")
+	{
+		startingRow := LV_GetNext(startingRow)
+		LV_GetText(rowPath, startingRow, 2)
+		;PostMessage, 0x111, 65306,,, % rowPath
+		PostMessage, 0x0111, 65403,,, % rowPath
+	}
 Return
 
 Suspend:
-	i := LV_GetNext()
-	;PostMessage, 0x111, 65305,,, % GetScriptPathFromHwnd(AHKWindows%i%)
-	PostMessage, 0x0111, 65404,,, % GetScriptPathFromHwnd(AHKWindows%i%)
+	startingRow:=0
+	loop % LV_GetCount("Selected")
+	{
+		startingRow := LV_GetNext(startingRow)
+		LV_GetText(rowPath, startingRow, 2)
+		;PostMessage, 0x111, 65305,,, % rowPath
+		PostMessage, 0x0111, 65404,,, % rowPath
+	}
 Return
 
 Edit:
-	i := LV_GetNext()
-    Run, % "notepad.exe " . GetScriptPathFromHwnd(AHKWindows%i%)
+	IniRead, defaultEditor, %setini%, defaultEditor, 1, %A_Space%
+	if (defaultEditor="") {
+		FileSelectFile defaultEditor, 3,, Select your editor, Programs (*.exe)
+		if ErrorLevel
+			return
+		IniWrite, %defaultEditor%, %setini%, defaultEditor, 1
+		RegWrite REG_SZ, HKCR, AutoHotkeyScript\Shell\Edit\Command,, %defaultEditor% "`%1"
+	}
+	startingRow:=0
+	loop % LV_GetCount("Selected")
+	{
+		startingRow := LV_GetNext(startingRow)
+		LV_GetText(rowName, startingRow, 1)
+		LV_GetText(rowPath, startingRow, 2)
+		type := SubStr(rowPath, -2 , 3)
+		if (type = "exe") {
+			msgbox, %rowName% is compiled and can't be edited.
+			continue
+		}
+		Run, % """" . defaultEditor . """" . " " . """" . rowPath . """"
+	}
 return
 
 Reload:
-	i := LV_GetNext()
-    Run, % GetScriptPathFromHwnd(AHKWindows%i%)
+	startingRow:=0
+	loop % LV_GetCount("Selected")
+	{
+		startingRow := LV_GetNext(startingRow)
+		LV_GetText(rowPath, startingRow, 2)
+		Run, "%A_AHKPath%" /restart "%rowPath%"
+	}
 return
 
 GuiSize:
@@ -95,17 +166,17 @@ GuiSize:
 	changedW := A_GuiWidth  - initSize.gui.w
 	changedH := A_GuiHeight - initSize.gui.h
 
-	GuiControl, Move, lvwList, % ("w" initSize.Edit1.w   + changedW) . (" h" initSize.Edit1.h   + changedH)
-	GuiControl, Move, Button1  , % ("y" initSize.Button1.y + changedH)
-	GuiControl, Move, Button2  , % ("y" initSize.Button2.y + changedH)
-	GuiControl, Move, Button3  , % ("y" initSize.Button3.y + changedH)
-	GuiControl, Move, Button4  , % ("y" initSize.Button4.y + changedH)
-	GuiControl, Move, Button5  , % ("y" initSize.Button5.y + changedH)
-	GuiControl, Move, Button6  , % ("y" initSize.Button6.y + changedH)
+	GuiControl, Move, lvwList, % ("w" initSize.Edit1.w + changedW) . (" h" initSize.Edit1.h + changedH)
+	GuiControl, Move, Button1, % ("y" initSize.Button1.y + changedH)
+	GuiControl, Move, Button2, % ("y" initSize.Button2.y + changedH)
+	GuiControl, Move, Button3, % ("y" initSize.Button3.y + changedH)
+	GuiControl, Move, Button4, % ("y" initSize.Button4.y + changedH)
+	GuiControl, Move, Button5, % ("y" initSize.Button5.y + changedH)
+	GuiControl, Move, Button6, % ("y" initSize.Button6.y + changedH)
 
 	lastGuiW := A_GuiWidth
 	lastGuiH := A_GuiHeight
-	Return
+Return
 
 RefreshList() {
     Global
@@ -114,28 +185,22 @@ RefreshList() {
     WinGet, AHKWindows, List, ahk_class AutoHotkey
     
     Loop %AHKWindows% {
-        
-        ;Get process ID
-        WinGet, AHKWindows%A_Index%_PID, PID, % "ahk_id " AHKWindows%A_Index%
-        GetProcessMemoryInfo(AHKWindows%A_Index%_PID)
-        
+	
+		;Get process ID
+		WinGet, AHKWindows%A_Index%_PID, PID, % "ahk_id " AHKWindows%A_Index%
+		GetProcessMemoryInfo(AHKWindows%A_Index%_PID)
+		
         ;Get memory info
-        LV_Add(0, GetScriptNameFromHwnd(AHKWindows%A_Index%)
+		LV_Add(0, GetScriptNameFromHwnd(AHKWindows%A_Index%)
 		, GetScriptPathFromHwnd(AHKWindows%A_Index%)
 		, AHKWindows%A_Index%_PID
-        , Round(GetProcessMemoryInfo(0,12) / 1024) " K", Round(GetProcessMemoryInfo(0,8) / 1024) " K"
-        , Round(GetProcessMemoryInfo(0,32) / 1024) " K", Round(GetProcessMemoryInfo(0,36) / 1024) " K")
-    }
-    
-    Loop 6
-        LV_ModifyCol(A_Index, "AutoHdr")
-    
-    ;Get columns width
-    iColWidth := 0
-    Loop 6 {
-        SendMessage, 4125, A_Index - 1, 0,, ahk_id %hlvwList%
-        iColWidth += ErrorLevel
-    }
+		, Round(GetProcessMemoryInfo(0,12) / 1024) " K", Round(GetProcessMemoryInfo(0,8) / 1024) " K"
+		, Round(GetProcessMemoryInfo(0,32) / 1024) " K", Round(GetProcessMemoryInfo(0,36) / 1024) " K")
+	}
+
+	Loop 7
+		LV_ModifyCol(A_Index, "AutoHdr")
+	
 	GuiControl, +ReDraw, lvwList
 }
 

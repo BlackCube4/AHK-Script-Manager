@@ -1,3 +1,7 @@
 
 *.kra~
 *.ico~
+*.png~
+Example.png
+preferences.ini
+*.ini
