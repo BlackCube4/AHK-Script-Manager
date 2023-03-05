@@ -7,9 +7,9 @@
 
 DetectHiddenWindows, On
 #SingleInstance Force
-Menu, tray, Icon , Script Manager.ico
-CurrentIcon:="normal"
+Menu, tray, Icon, Script Manager.ico, , 1
 OnExit, ExitLabel
+WinGet, ScriptPID, PID, ahk_id %A_ScriptHwnd%
 
 standardWidth := "435"
 standardHeight := "202"
@@ -77,7 +77,8 @@ CloseScript:
 	{
 		startingRow := LV_GetNext(startingRow)
 		LV_GetText(rowAhkID, startingRow, 3)
-		Process, Close, %rowAhkID%
+		if (rowAhkID!=ScriptPID)
+			Process, Close, %rowAhkID%
 	}
     RefreshList()
 Return
